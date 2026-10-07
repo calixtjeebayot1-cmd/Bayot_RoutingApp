@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const MyApp());
@@ -11,21 +14,16 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Simple Routing',
-
+      title: 'API Routing App',
       initialRoute: '/',
-
       routes: {
         '/': (context) => const HomePage(),
-        '/about': (context) => const AboutPage(),
-        '/profile': (context) => const ProfilePage(),
-        '/settings': (context) => const SettingsPage(),
+        '/api': (context) => const ApiPage(),
       },
     );
   }
 }
 
-// HOME PAGE
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -33,202 +31,111 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home Page'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        title: const Text('Sample Routing'),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.home,
-              size: 100,
-              color: Colors.blue,
-            ),
-
-            const SizedBox(height: 20),
-
-            const Text(
-              'Welcome to Home Page',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/about');
-              },
-              child: const Text('Go to About'),
-            ),
-
-            const SizedBox(height: 10),
-
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/profile');
-              },
-              child: const Text('Go to Profile'),
-            ),
-
-            const SizedBox(height: 10),
-
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/settings');
-              },
-              child: const Text('Go to Settings'),
-            ),
-          ],
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.pushNamed(context, '/api');
+          },
+          child: const Text('Go to API Page'),
         ),
       ),
     );
   }
 }
 
-// ABOUT PAGE
-class AboutPage extends StatelessWidget {
-  const AboutPage({super.key});
+class ApiPage extends StatefulWidget {
+  const ApiPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('About Page'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.info,
-              size: 100,
-              color: Colors.green,
-            ),
+  State<ApiPage> createState() => _ApiPageState();
+}
 
-            const SizedBox(height: 20),
+class _ApiPageState extends State<ApiPage> {
+  List<dynamic> posts = [];
+  bool isLoading = true;
 
-            const Text(
-              'This is the About Page',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+  }
 
-            const SizedBox(height: 30),
+  Future<void> fetchData() async {
+    final response = await http.get(
+      Uri.parse('https://jsonplaceholder.typicode.com/posts'),
+    );
 
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Back'),
-            ),
-          ],
-        ),
+    if (response.statusCode == 200) {
+      setState(() {
+        posts = jsonDecode(response.body);
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  void deleteItem(int index) {
+    setState(() {
+      posts.removeAt(index);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Item deleted'),
       ),
     );
   }
-}
-
-// PROFILE PAGE
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile Page'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
+        title: const Text('API Data'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircleAvatar(
-              radius: 60,
-              child: Icon(
-                Icons.person,
-                size: 70,
-              ),
-            ),
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : ListView.builder(
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                final post = posts[index];
 
-            const SizedBox(height: 20),
-
-            const Text(
-              'My Profile',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      child: Text(
+                        '${post['id']}',
+                      ),
+                    ),
+                    title: Text(
+                      post['title'],
+                    ),
+                    subtitle: Text(
+                      post['body'],
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                      ),
+                      onPressed: () {
+                        deleteItem(index);
+                      },
+                    ),
+                  ),
+                );
               },
-              child: const Text('Back'),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// SETTINGS PAGE
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings Page'),
-        backgroundColor: Colors.purple,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.settings,
-              size: 100,
-              color: Colors.purple,
-            ),
-
-            const SizedBox(height: 20),
-
-            const Text(
-              'Settings',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Back'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
